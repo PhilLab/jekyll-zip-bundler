@@ -16,6 +16,7 @@ module Jekyll
   # {% zip {{ variableName }} {{ VariableContainingAList }} %}
   class ZipBundlerTag < Liquid::Tag
     VARIABLE_SYNTAX = /[^{]*(\{\{\s*[\w\-.]+\s*(\|.*)?\}\}[^\s{}]*)/mx.freeze
+    CACHE_FOLDER = '.jekyll-cache/zip_bundler/'
 
     def initialize(tag_name, markup, tokens)
       super
@@ -29,40 +30,17 @@ module Jekyll
     end
 
     def render(context)
-      files = []
-      # Resolve the given parameters to a file list
-      @files.each do |file|
-        matched = file.match(VARIABLE_SYNTAX)
-        if matched
-          # This is a variable. Look it up.
-          resolved = context[file]
-          if resolved.respond_to?(:each)
-            # This is a collection. Flatten it before appending
-            resolved.each do |resolved_file|
-              files.push(resolved_file)
-            end
-          else
-            files.push(resolved)
-          end
-        elsif file.length.positive?
-          files.push(file)
-        end
-      end
-
       # First file is the target zip archive path
-      abort 'zip tag must be called with at least two files' if files.length < 2
-      # Generate the file in the cache folder
-      cache_folder = '.jekyll-cache/zip_bundler/'
-      target = files[0]
-      zipfile_path = cache_folder + target
-      FileUtils.makedirs(File.dirname(zipfile_path))
+      target, files = resolve_parameters(context)
+      abort 'zip tag must be called with at least two files' if files.empty?
 
-      files_to_zip = files[1..-1]
+      zipfile_path = CACHE_FOLDER + target
+      FileUtils.makedirs(File.dirname(zipfile_path))
 
       # Create the archive. Delete file, if it already exists
       File.delete(zipfile_path) if File.exist?(zipfile_path)
       Zip::File.open(zipfile_path, Zip::File::CREATE) do |zipfile|
-        files_to_zip.each do |file|
+        files.each do |file|
           # Two arguments:
           # - The name of the file as it will appear in the archive
           # - The original file, including the path to find it
@@ -78,6 +56,18 @@ module Jekyll
                                                   File.basename(zipfile_path))
       # No rendered output
       ''
+    end
+
+    private_class_method def resolve_parameters(context)
+      # Resolve the given parameters to a file list
+      target, files = @files.map do |file|
+        next file unless file.match(VARIABLE_SYNTAX)
+
+        # This is a variable. Look it up.
+        context[file]
+      end
+
+      [target, files]
     end
   end
 end
