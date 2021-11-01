@@ -22,14 +22,17 @@ module Jekyll
       # Split by spaces but only if the text following contains an even number of '
       # Based on https://stackoverflow.com/a/11566264
       # Extended to also not split between the curly brackets of Liquid
+      # In addition, make sure the strings are stripped and not empty
       @files = markup.strip.split(/\s(?=(?:[^'}]|'[^']*'|{{[^}]*}})*$)/)
+                     .map(&:strip)
+                     .reject(&:empty?)
     end
 
     def render(context)
       files = []
       # Resolve the given parameters to a file list
       @files.each do |file|
-        matched = file.strip.match(VARIABLE_SYNTAX)
+        matched = file.match(VARIABLE_SYNTAX)
         if matched
           # This is a variable. Look it up.
           resolved = context[file]
@@ -41,8 +44,8 @@ module Jekyll
           else
             files.push(resolved)
           end
-        elsif file.strip.length.positive?
-          files.push(file.strip)
+        elsif file.length.positive?
+          files.push(file)
         end
       end
 
@@ -50,7 +53,8 @@ module Jekyll
       abort 'zip tag must be called with at least two files' if files.length < 2
       # Generate the file in the cache folder
       cache_folder = '.jekyll-cache/zip_bundler/'
-      zipfile_path = cache_folder + files[0]
+      target = files[0]
+      zipfile_path = cache_folder + target
       FileUtils.makedirs(File.dirname(zipfile_path))
 
       files_to_zip = files[1..-1]
@@ -70,7 +74,7 @@ module Jekyll
       # Add the archive to the site's static files
       site = context.registers[:site]
       site.static_files << Jekyll::StaticFile.new(site, "#{site.source}/#{cache_folder}",
-                                                  File.dirname(files[0]),
+                                                  File.dirname(target),
                                                   File.basename(zipfile_path))
       # No rendered output
       ''
