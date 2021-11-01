@@ -1,0 +1,10 @@
+Layout/LineLength:
+  Max: 100
+AllCops:
+  NewCops: enable
+
+# Weaken some metrics
+Metrics/AbcSize:
+  Max: 30
+Metrics/MethodLength:
+  Max: 30
