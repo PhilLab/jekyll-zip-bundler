@@ -51,14 +51,14 @@ module Jekyll
 
       # Add the archive to the site's static files
       site = context.registers[:site]
-      site.static_files << Jekyll::StaticFile.new(site, "#{site.source}/#{cache_folder}",
+      site.static_files << Jekyll::StaticFile.new(site, "#{site.source}/#{CACHE_FOLDER}",
                                                   File.dirname(target),
                                                   File.basename(zipfile_path))
       # No rendered output
       ''
     end
 
-    private_class_method def resolve_parameters(context)
+    def resolve_parameters(context)
       # Resolve the given parameters to a file list
       target, files = @files.map do |file|
         next file unless file.match(VARIABLE_SYNTAX)
